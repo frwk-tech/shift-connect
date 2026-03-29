@@ -77,6 +77,20 @@ export default function DashboardPage() {
       active: true,
     },
     {
+      href: "/schedule",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-400">
+          <line x1="4" y1="9" x2="20" y2="9" />
+          <line x1="4" y1="15" x2="20" y2="15" />
+          <rect x="6" y="7" width="8" height="4" rx="1" />
+          <rect x="10" y="13" width="6" height="4" rx="1" />
+        </svg>
+      ),
+      title: "スケジュール",
+      description: "月間ガントチャートで案件を一覧表示",
+      active: true,
+    },
+    {
       href: "#",
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-200/40">
@@ -143,7 +157,7 @@ export default function DashboardPage() {
         </p>
 
         {/* Menu Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {menuItems.map((item) => (
             <button
               key={item.title}
