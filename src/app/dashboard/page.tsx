@@ -49,6 +49,49 @@ export default function DashboardPage() {
       ? `${profile.last_name} ${profile.first_name}`
       : user?.user_metadata?.full_name || user?.email;
 
+  const menuItems = [
+    {
+      href: "/profile",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-400">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M20 21a8 8 0 10-16 0" />
+        </svg>
+      ),
+      title: "プロフィール設定",
+      description: "氏名・生年月日などの基本情報を設定",
+      active: true,
+    },
+    {
+      href: "/projects",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-400">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      ),
+      title: "案件管理",
+      description: "案件の作成・スタッフアサインの管理",
+      active: true,
+    },
+    {
+      href: "#",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-200/40">
+          <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <line x1="19" y1="8" x2="19" y2="14" />
+          <line x1="22" y1="11" x2="16" y2="11" />
+        </svg>
+      ),
+      title: "コネクション",
+      description: "Coming Soon",
+      active: false,
+    },
+  ];
+
   return (
     <div
       className="min-h-screen"
@@ -99,47 +142,33 @@ export default function DashboardPage() {
           ShiftConnectのダッシュボードです
         </p>
 
-        {/* Quick Actions */}
+        {/* Menu Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <button
-            onClick={() => router.push("/profile")}
-            className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] text-left hover:border-blue-400/20 hover:bg-white/[0.04] transition-all group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-blue-400/10 flex items-center justify-center mb-4 group-hover:bg-blue-400/20 transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-400">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M20 21a8 8 0 10-16 0" />
-              </svg>
-            </div>
-            <h3 className="text-sm font-medium text-blue-100 mb-1">プロフィール設定</h3>
-            <p className="text-xs text-blue-200/35">氏名・生年月日などの基本情報を設定</p>
-          </button>
-
-          <div className="p-6 rounded-2xl border border-white/5 bg-white/[0.01] text-left opacity-40">
-            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-4">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-200/40">
-                <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <line x1="19" y1="8" x2="19" y2="14" />
-                <line x1="22" y1="11" x2="16" y2="11" />
-              </svg>
-            </div>
-            <h3 className="text-sm font-medium text-blue-100/50 mb-1">コネクション</h3>
-            <p className="text-xs text-blue-200/25">Coming Soon</p>
-          </div>
-
-          <div className="p-6 rounded-2xl border border-white/5 bg-white/[0.01] text-left opacity-40">
-            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-4">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-200/40">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-            </div>
-            <h3 className="text-sm font-medium text-blue-100/50 mb-1">スケジュール</h3>
-            <p className="text-xs text-blue-200/25">Coming Soon</p>
-          </div>
+          {menuItems.map((item) => (
+            <button
+              key={item.title}
+              onClick={() => item.active && router.push(item.href)}
+              className={`p-6 rounded-2xl border text-left transition-all group ${
+                item.active
+                  ? "border-white/10 bg-white/[0.02] hover:border-blue-400/20 hover:bg-white/[0.04] cursor-pointer"
+                  : "border-white/5 bg-white/[0.01] opacity-40 cursor-default"
+              }`}
+            >
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-colors ${
+                  item.active ? "bg-blue-400/10 group-hover:bg-blue-400/20" : "bg-white/5"
+                }`}
+              >
+                {item.icon}
+              </div>
+              <h3 className={`text-sm font-medium mb-1 ${item.active ? "text-blue-100" : "text-blue-100/50"}`}>
+                {item.title}
+              </h3>
+              <p className={`text-xs ${item.active ? "text-blue-200/35" : "text-blue-200/25"}`}>
+                {item.description}
+              </p>
+            </button>
+          ))}
         </div>
       </main>
     </div>
