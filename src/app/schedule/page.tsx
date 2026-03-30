@@ -42,6 +42,24 @@ export default function SchedulePage() {
     }
     setUser(authData.user);
 
+    // Save Google tokens if available in session
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session) {
+      const session = sessionData.session;
+      if (session.provider_token) {
+        await supabase
+          .from("users")
+          .update({
+            google_access_token: session.provider_token,
+            google_refresh_token: session.provider_refresh_token || undefined,
+            google_token_expires_at: new Date(
+              Date.now() + 3600 * 1000
+            ).toISOString(),
+          })
+          .eq("id", authData.user.id);
+      }
+    }
+
     const startOfMonth = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     const endOfMonth = `${year}-${String(month + 1).padStart(2, "0")}-${daysInMonth}`;
 
