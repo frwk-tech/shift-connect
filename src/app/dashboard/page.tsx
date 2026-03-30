@@ -51,15 +51,17 @@ export default function DashboardPage() {
 
   const menuItems = [
     {
-      href: "/profile",
+      href: "/schedule",
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-400">
-          <circle cx="12" cy="8" r="4" />
-          <path d="M20 21a8 8 0 10-16 0" />
+          <line x1="4" y1="9" x2="20" y2="9" />
+          <line x1="4" y1="15" x2="20" y2="15" />
+          <rect x="6" y="7" width="8" height="4" rx="1" />
+          <rect x="10" y="13" width="7" height="4" rx="1" />
         </svg>
       ),
-      title: "プロフィール設定",
-      description: "氏名・生年月日などの基本情報を設定",
+      title: "マイスケジュール",
+      description: "月間ガントチャートで個人の案件を確認",
       active: true,
     },
     {
@@ -77,17 +79,29 @@ export default function DashboardPage() {
       active: true,
     },
     {
-      href: "/schedule",
+      href: "/org",
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-400">
-          <line x1="4" y1="9" x2="20" y2="9" />
-          <line x1="4" y1="15" x2="20" y2="15" />
-          <rect x="6" y="7" width="8" height="4" rx="1" />
-          <rect x="10" y="13" width="6" height="4" rx="1" />
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 00-3-3.87" />
+          <path d="M16 3.13a4 4 0 010 7.75" />
         </svg>
       ),
-      title: "スケジュール",
-      description: "月間ガントチャートで案件を一覧表示",
+      title: "組織管理",
+      description: "組織の作成・メンバー管理・組織カレンダー",
+      active: true,
+    },
+    {
+      href: "/profile",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-400">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M20 21a8 8 0 10-16 0" />
+        </svg>
+      ),
+      title: "プロフィール設定",
+      description: "氏名・生年月日などの基本情報を設定",
       active: true,
     },
     {
@@ -157,7 +171,7 @@ export default function DashboardPage() {
         </p>
 
         {/* Menu Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {menuItems.map((item) => (
             <button
               key={item.title}
