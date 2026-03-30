@@ -37,7 +37,9 @@ export default function SchedulePage() {
   const [gcalEvents, setGcalEvents] = useState<GCalEvent[]>([]);
   const [importLoading, setImportLoading] = useState(false);
   const [importMessage, setImportMessage] = useState("");
+  const [syncStatus, setSyncStatus] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const watchRegistered = useRef(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -75,6 +77,27 @@ export default function SchedulePage() {
       }
     }
 
+    // Register Google Calendar watch (once per session)
+    if (!watchRegistered.current) {
+      watchRegistered.current = true;
+      try {
+        const res = await fetch("/api/calendar/watch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: authData.user.id }),
+        });
+        const result = await res.json();
+        if (result.success) {
+          setSyncStatus("リアルタイム同期: ON");
+        } else {
+          setSyncStatus("リアルタイム同期: 未接続");
+        }
+      } catch {
+        setSyncStatus("リアルタイム同期: 未接続");
+      }
+      setTimeout(() => setSyncStatus(""), 5000);
+    }
+
     const startOfMonth = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     const endOfMonth = `${year}-${String(month + 1).padStart(2, "0")}-${daysInMonth}`;
 
@@ -110,7 +133,6 @@ export default function SchedulePage() {
 
       const result = await res.json();
       if (result.success && result.events) {
-        // Filter out events already imported
         const existingGcalIds = projects
           .filter((p) => p.gcal_event_id)
           .map((p) => p.gcal_event_id);
@@ -160,7 +182,6 @@ export default function SchedulePage() {
         endDate = e.toISOString().split("T")[0];
         endTime = `${String(e.getHours()).padStart(2, "0")}:${String(e.getMinutes()).padStart(2, "0")}`;
       } else if (event.end.date) {
-        // All-day events: end date is exclusive, subtract 1 day
         const e = new Date(event.end.date);
         e.setDate(e.getDate() - 1);
         endDate = e.toISOString().split("T")[0];
@@ -221,9 +242,8 @@ export default function SchedulePage() {
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const goToday = () => setCurrentDate(new Date());
 
-  const getDayOfWeek = (day: number) => {
-    return ["日", "月", "火", "水", "木", "金", "土"][new Date(year, month, day).getDay()];
-  };
+  const getDayOfWeek = (day: number) =>
+    ["日", "月", "火", "水", "木", "金", "土"][new Date(year, month, day).getDay()];
 
   const getDayColor = (day: number) => {
     const dow = new Date(year, month, day).getDay();
@@ -242,11 +262,8 @@ export default function SchedulePage() {
     const monthEnd = new Date(year, month, daysInMonth);
     const barStart = startDate < monthStart ? 1 : startDate.getDate();
     const barEnd = endDate > monthEnd ? daysInMonth : endDate.getDate();
-    const cellWidth = 48;
-    return {
-      left: `${(barStart - 1) * cellWidth}px`,
-      width: `${(barEnd - barStart + 1) * cellWidth}px`,
-    };
+    const cw = 48;
+    return { left: `${(barStart - 1) * cw}px`, width: `${(barEnd - barStart + 1) * cw}px` };
   };
 
   const formatTime = (t: string) => (t ? t.slice(0, 5) : "");
@@ -302,16 +319,19 @@ export default function SchedulePage() {
               {year}年 {month + 1}月
             </h2>
             <div className="flex items-center gap-1">
-              <button onClick={prevMonth} className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-blue-200/50 hover:text-blue-200/80 hover:border-white/20 transition-all">
-                ‹
-              </button>
-              <button onClick={goToday} className="px-3 h-8 rounded-lg border border-white/10 text-xs text-blue-200/50 hover:text-blue-200/80 hover:border-white/20 transition-all">
-                今日
-              </button>
-              <button onClick={nextMonth} className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-blue-200/50 hover:text-blue-200/80 hover:border-white/20 transition-all">
-                ›
-              </button>
+              <button onClick={prevMonth} className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-blue-200/50 hover:text-blue-200/80 hover:border-white/20 transition-all">‹</button>
+              <button onClick={goToday} className="px-3 h-8 rounded-lg border border-white/10 text-xs text-blue-200/50 hover:text-blue-200/80 hover:border-white/20 transition-all">今日</button>
+              <button onClick={nextMonth} className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-blue-200/50 hover:text-blue-200/80 hover:border-white/20 transition-all">›</button>
             </div>
+            {syncStatus && (
+              <span className={`text-xs px-3 py-1 rounded-full ${
+                syncStatus.includes("ON")
+                  ? "bg-green-400/10 text-green-400/60 border border-green-400/15"
+                  : "bg-amber-400/10 text-amber-400/60 border border-amber-400/15"
+              }`}>
+                {syncStatus}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -445,7 +465,6 @@ export default function SchedulePage() {
           }}
         >
           <div className="flex">
-            {/* Left: Project Names */}
             <div className="flex-shrink-0 w-[200px] border-r border-white/5 z-10">
               <div className="h-[72px] border-b border-white/5 flex items-end px-4 pb-2">
                 <span className="text-xs text-blue-200/30">案件名</span>
@@ -472,10 +491,8 @@ export default function SchedulePage() {
               )}
             </div>
 
-            {/* Right: Gantt Grid */}
             <div className="flex-1 overflow-x-auto" ref={scrollRef}>
               <div style={{ minWidth: `${daysInMonth * cellWidth}px` }}>
-                {/* Date Header */}
                 <div className="h-[72px] border-b border-white/5 flex">
                   {days.map((day) => (
                     <div
@@ -499,7 +516,6 @@ export default function SchedulePage() {
                   ))}
                 </div>
 
-                {/* Project Bars */}
                 {projects.length === 0 ? (
                   <div className="h-[60px]" />
                 ) : (
@@ -559,7 +575,7 @@ export default function SchedulePage() {
             </span>
             <span className="flex items-center gap-1">
               <span className="w-3 h-2 rounded-sm" style={{ background: "linear-gradient(135deg, #059669, #34d399)" }} />
-              Google取り込み
+              Google同期
             </span>
             <span>● 今日: {today.getMonth() + 1}/{today.getDate()}</span>
           </div>
