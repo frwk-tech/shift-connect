@@ -13,7 +13,7 @@ type Project = {
   end_time: string;
   location: string;
   memo: string;
-  status?: string;
+  gcal_event_id: string;
 };
 
 export default function ProjectsPage() {
@@ -23,6 +23,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
   const [form, setForm] = useState({
     name: "",
     start_date: "",
@@ -63,25 +64,91 @@ export default function ProjectsPage() {
     e.preventDefault();
     if (!form.name || !form.start_date) return;
     setSaving(true);
+    setSyncMessage("");
 
-    const { error } = await supabase.from("projects").insert({
-      owner_id: user.id,
-      name: form.name,
-      start_date: form.start_date,
-      end_date: form.end_date || form.start_date,
-      start_time: form.start_time || null,
-      end_time: form.end_time || null,
-      location: form.location,
-      memo: form.memo,
-      visibility: "private",
-    });
+    // Create project in DB
+    const { data: newProject, error } = await supabase
+      .from("projects")
+      .insert({
+        owner_id: user.id,
+        name: form.name,
+        start_date: form.start_date,
+        end_date: form.end_date || form.start_date,
+        start_time: form.start_time || null,
+        end_time: form.end_time || null,
+        location: form.location,
+        memo: form.memo,
+        visibility: "private",
+      })
+      .select()
+      .single();
 
-    setSaving(false);
-    if (!error) {
-      setForm({ name: "", start_date: "", end_date: "", start_time: "", end_time: "", location: "", memo: "" });
-      setShowForm(false);
-      loadData();
+    if (error || !newProject) {
+      setSaving(false);
+      setSyncMessage("案件の作成に失敗しました");
+      return;
     }
+
+    // Sync to Google Calendar
+    try {
+      const res = await fetch("/api/calendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          userId: user.id,
+          project: {
+            id: newProject.id,
+            name: form.name,
+            start_date: form.start_date,
+            end_date: form.end_date || form.start_date,
+            start_time: form.start_time || null,
+            end_time: form.end_time || null,
+            location: form.location,
+            memo: form.memo,
+          },
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        setSyncMessage("Googleカレンダーに同期しました ✓");
+      } else {
+        setSyncMessage("案件は作成されましたが、カレンダー同期に失敗しました");
+      }
+    } catch {
+      setSyncMessage("案件は作成されましたが、カレンダー同期に失敗しました");
+    }
+
+    setForm({ name: "", start_date: "", end_date: "", start_time: "", end_time: "", location: "", memo: "" });
+    setShowForm(false);
+    setSaving(false);
+    loadData();
+    setTimeout(() => setSyncMessage(""), 5000);
+  };
+
+  const handleDelete = async (project: Project) => {
+    if (!confirm(`「${project.name}」を削除しますか？`)) return;
+
+    // Delete from Google Calendar if synced
+    if (project.gcal_event_id) {
+      try {
+        await fetch("/api/calendar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "delete",
+            userId: user.id,
+            eventId: project.gcal_event_id,
+          }),
+        });
+      } catch {
+        // Continue with DB delete even if calendar delete fails
+      }
+    }
+
+    await supabase.from("projects").delete().eq("id", project.id);
+    loadData();
   };
 
   const formatDate = (dateStr: string) => {
@@ -140,7 +207,7 @@ export default function ProjectsPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-light text-blue-50">案件管理</h2>
-            <p className="text-sm text-blue-200/40 mt-1">案件の作成・管理ができます</p>
+            <p className="text-sm text-blue-200/40 mt-1">案件の作成・管理（Googleカレンダー自動同期）</p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
@@ -157,6 +224,19 @@ export default function ProjectsPage() {
             {showForm ? "キャンセル" : "+ 新規案件"}
           </button>
         </div>
+
+        {/* Sync Message */}
+        {syncMessage && (
+          <div
+            className={`mb-6 px-5 py-3 rounded-xl text-sm ${
+              syncMessage.includes("✓")
+                ? "bg-green-400/10 border border-green-400/20 text-green-400/80"
+                : "bg-amber-400/10 border border-amber-400/20 text-amber-400/80"
+            }`}
+          >
+            {syncMessage}
+          </div>
+        )}
 
         {/* Create Form */}
         {showForm && (
@@ -266,10 +346,10 @@ export default function ProjectsPage() {
                 {saving ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    作成中...
+                    作成・同期中...
                   </span>
                 ) : (
-                  "案件を作成"
+                  "案件を作成（Googleカレンダーに同期）"
                 )}
               </button>
             </form>
@@ -295,11 +375,18 @@ export default function ProjectsPage() {
             {projects.map((project) => (
               <div
                 key={project.id}
-                className="p-5 rounded-2xl border border-white/10 bg-white/[0.02] hover:border-blue-400/15 hover:bg-white/[0.03] transition-all cursor-pointer"
+                className="p-5 rounded-2xl border border-white/10 bg-white/[0.02] hover:border-blue-400/15 hover:bg-white/[0.03] transition-all"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-sm font-medium text-blue-100 mb-2">{project.name}</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-sm font-medium text-blue-100">{project.name}</h3>
+                      {project.gcal_event_id && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-400/10 text-green-400/60 border border-green-400/15">
+                          同期済
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-4 text-xs text-blue-200/40">
                       <span className="flex items-center gap-1">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -332,6 +419,12 @@ export default function ProjectsPage() {
                       )}
                     </div>
                   </div>
+                  <button
+                    onClick={() => handleDelete(project)}
+                    className="text-xs text-red-400/40 hover:text-red-400/70 transition-colors px-2 py-1"
+                  >
+                    削除
+                  </button>
                 </div>
                 {project.memo && (
                   <p className="mt-3 text-xs text-blue-200/30 border-t border-white/5 pt-3">{project.memo}</p>

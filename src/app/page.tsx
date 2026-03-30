@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { signInWithGoogle } from "@/lib/supabase";
 
 function NetworkCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -115,12 +115,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    const { error } = await signInWithGoogle();
     if (error) {
       console.error("Login error:", error.message);
       setLoading(false);
